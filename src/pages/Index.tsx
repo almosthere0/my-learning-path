@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from '@/components/Sidebar';
 import { Dashboard } from '@/components/Dashboard';
@@ -7,8 +7,10 @@ import { RoadmapEditor } from '@/components/RoadmapEditor';
 import { CategoryManager } from '@/components/CategoryManager';
 import { ImportExport } from '@/components/ImportExport';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
+import { PomodoroTimer } from '@/components/PomodoroTimer';
+import { Statistics } from '@/components/Statistics';
 
-type View = 'dashboard' | 'roadmaps' | 'categories' | 'export' | 'import' | 'editor';
+type View = 'dashboard' | 'roadmaps' | 'categories' | 'export' | 'import' | 'editor' | 'pomodoro' | 'statistics';
 
 const Index = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
@@ -93,6 +95,16 @@ const Index = () => {
           
           {activeView === 'categories' && (
             <CategoryManager key="categories" />
+          )}
+          
+          {activeView === 'pomodoro' && (
+            <div key="pomodoro" className="p-8 max-w-2xl mx-auto">
+              <PomodoroTimer />
+            </div>
+          )}
+          
+          {activeView === 'statistics' && (
+            <Statistics key="statistics" />
           )}
           
           {activeView === 'export' && (

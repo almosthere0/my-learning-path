@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoadmapStore } from '@/hooks/useRoadmapStore';
 import { Roadmap } from '@/types/roadmap';
-import { StepItem } from './StepItem';
+import { StepItemExpanded } from './StepItemExpanded';
 import { ProgressBar } from './ProgressBar';
 import { CategoryBadge } from './CategoryBadge';
 import { 
@@ -11,7 +11,8 @@ import {
   Trash2, 
   Save,
   Edit2,
-  X
+  X,
+  Clock
 } from 'lucide-react';
 
 interface RoadmapEditorProps {
@@ -61,7 +62,7 @@ export const RoadmapEditor = ({ roadmapId, onBack, onSave }: RoadmapEditorProps)
     if (existingRoadmap) {
       updateRoadmap(existingRoadmap.id, { title, description, categoryId });
     } else {
-      addRoadmap({ title, description, categoryId, steps: [] });
+      addRoadmap({ title, description, categoryId, steps: [], totalStudyTime: 0 });
     }
     setIsEditing(false);
     onSave();
@@ -245,6 +246,13 @@ export const RoadmapEditor = ({ roadmapId, onBack, onSave }: RoadmapEditorProps)
             </div>
 
             <ProgressBar progress={progress} size="lg" />
+            
+            {existingRoadmap && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                <Clock className="w-4 h-4" />
+                <span>Study time: {Math.floor(existingRoadmap.totalStudyTime / 60)}h {existingRoadmap.totalStudyTime % 60}m</span>
+              </div>
+            )}
           </>
         )}
       </motion.div>
@@ -285,9 +293,10 @@ export const RoadmapEditor = ({ roadmapId, onBack, onSave }: RoadmapEditorProps)
           <div className="space-y-2">
             <AnimatePresence mode="popLayout">
               {existingRoadmap.steps.map((step) => (
-                <StepItem
+                <StepItemExpanded
                   key={step.id}
                   step={step}
+                  roadmapId={existingRoadmap.id}
                   onToggle={() => toggleStep(existingRoadmap.id, step.id)}
                   onDelete={() => deleteStep(existingRoadmap.id, step.id)}
                 />
