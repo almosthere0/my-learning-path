@@ -4,9 +4,10 @@ import {
   Map, 
   FolderOpen, 
   Download, 
-  Upload, 
-  Settings,
-  Terminal
+  Upload,
+  Terminal,
+  Timer,
+  BarChart3
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -17,6 +18,8 @@ interface SidebarProps {
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'roadmaps', label: 'Roadmaps', icon: Map },
+  { id: 'pomodoro', label: 'Pomodoro', icon: Timer },
+  { id: 'statistics', label: 'Statistics', icon: BarChart3 },
   { id: 'categories', label: 'Categories', icon: FolderOpen },
 ];
 
@@ -90,7 +93,7 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
       <div className="p-4 border-t border-sidebar-border">
         <div className="terminal-card p-3 bg-primary/5 border-primary/20">
           <p className="text-xs text-muted-foreground">
-            <span className="text-primary">$</span> v1.0.0
+            <span className="text-primary">$</span> v1.1.0
           </p>
           <p className="text-[10px] text-muted-foreground mt-1">
             Keep learning, keep growing

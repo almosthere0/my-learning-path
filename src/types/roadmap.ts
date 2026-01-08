@@ -1,3 +1,11 @@
+export interface Resource {
+  id: string;
+  type: 'link' | 'file' | 'note';
+  title: string;
+  content: string; // URL for links, filename for files, markdown for notes
+  createdAt: string;
+}
+
 export interface Step {
   id: string;
   title: string;
@@ -5,6 +13,24 @@ export interface Step {
   completed: boolean;
   createdAt: string;
   completedAt?: string;
+  dueDate?: string;
+  resources: Resource[];
+}
+
+export interface PomodoroSession {
+  id: string;
+  roadmapId: string;
+  startTime: string;
+  endTime: string;
+  duration: number; // in minutes
+  completed: boolean;
+}
+
+export interface DailyActivity {
+  date: string; // YYYY-MM-DD
+  stepsCompleted: number;
+  pomodoroMinutes: number;
+  roadmapsWorkedOn: string[];
 }
 
 export interface Roadmap {
@@ -15,6 +41,7 @@ export interface Roadmap {
   steps: Step[];
   createdAt: string;
   updatedAt: string;
+  totalStudyTime: number; // in minutes
 }
 
 export interface Category {
@@ -27,6 +54,11 @@ export interface Category {
 export interface AppState {
   roadmaps: Roadmap[];
   categories: Category[];
+  pomodoroSessions: PomodoroSession[];
+  dailyActivities: DailyActivity[];
+  currentStreak: number;
+  longestStreak: number;
+  lastActiveDate: string;
 }
 
 export type SortOption = 'title' | 'category' | 'progress' | 'created' | 'updated';
