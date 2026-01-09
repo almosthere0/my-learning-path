@@ -7,7 +7,11 @@ import {
   Upload,
   Terminal,
   Timer,
-  BarChart3
+  BarChart3,
+  Trophy,
+  Sword,
+  Settings,
+  BookTemplate
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,10 +24,14 @@ const menuItems = [
   { id: 'roadmaps', label: 'Roadmaps', icon: Map },
   { id: 'pomodoro', label: 'Pomodoro', icon: Timer },
   { id: 'statistics', label: 'Statistics', icon: BarChart3 },
+  { id: 'achievements', label: 'Achievements', icon: Trophy },
+  { id: 'quests', label: 'Quests', icon: Sword },
+  { id: 'templates', label: 'Templates', icon: BookTemplate },
   { id: 'categories', label: 'Categories', icon: FolderOpen },
 ];
 
 const utilityItems = [
+  { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'export', label: 'Export Data', icon: Download },
   { id: 'import', label: 'Import Data', icon: Upload },
 ];
@@ -31,7 +39,6 @@ const utilityItems = [
 export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
   return (
     <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col h-screen sticky top-0">
-      {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -48,18 +55,15 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
         </motion.div>
       </div>
 
-      {/* Main Navigation */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider px-3 mb-3">
-            Navigation
-          </p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider px-3 mb-3">Navigation</p>
           {menuItems.map((item, index) => (
             <motion.button
               key={item.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
               onClick={() => onViewChange(item.id)}
               className={`sidebar-item w-full ${activeView === item.id ? 'active' : ''}`}
             >
@@ -70,15 +74,13 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
         </div>
 
         <div className="mt-8 space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider px-3 mb-3">
-            Utilities
-          </p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider px-3 mb-3">Utilities</p>
           {utilityItems.map((item, index) => (
             <motion.button
               key={item.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: (menuItems.length + index) * 0.1 }}
+              transition={{ delay: (menuItems.length + index) * 0.05 }}
               onClick={() => onViewChange(item.id)}
               className={`sidebar-item w-full ${activeView === item.id ? 'active' : ''}`}
             >
@@ -89,15 +91,12 @@ export const Sidebar = ({ activeView, onViewChange }: SidebarProps) => {
         </div>
       </nav>
 
-      {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
         <div className="terminal-card p-3 bg-primary/5 border-primary/20">
           <p className="text-xs text-muted-foreground">
-            <span className="text-primary">$</span> v1.1.0
+            <span className="text-primary">$</span> v2.0.0
           </p>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Keep learning, keep growing
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">Keep learning, keep growing</p>
         </div>
       </div>
     </aside>

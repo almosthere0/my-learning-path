@@ -9,8 +9,12 @@ import { ImportExport } from '@/components/ImportExport';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
 import { Statistics } from '@/components/Statistics';
+import { Achievements } from '@/components/Achievements';
+import { Quests } from '@/components/Quests';
+import { Settings } from '@/components/Settings';
+import { Templates } from '@/components/Templates';
 
-type View = 'dashboard' | 'roadmaps' | 'categories' | 'export' | 'import' | 'editor' | 'pomodoro' | 'statistics';
+type View = 'dashboard' | 'roadmaps' | 'categories' | 'export' | 'import' | 'editor' | 'pomodoro' | 'statistics' | 'achievements' | 'quests' | 'settings' | 'templates';
 
 const Index = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
@@ -70,50 +74,25 @@ const Index = () => {
       <main className="flex-1 overflow-auto">
         <AnimatePresence mode="wait">
           {activeView === 'dashboard' && (
-            <Dashboard 
-              key="dashboard"
-              onSelectRoadmap={handleSelectRoadmap} 
-            />
+            <Dashboard key="dashboard" onSelectRoadmap={handleSelectRoadmap} />
           )}
-          
           {activeView === 'roadmaps' && (
-            <RoadmapList 
-              key="roadmaps"
-              onSelectRoadmap={handleSelectRoadmap}
-              onCreateNew={handleCreateNew}
-            />
+            <RoadmapList key="roadmaps" onSelectRoadmap={handleSelectRoadmap} onCreateNew={handleCreateNew} />
           )}
-          
           {activeView === 'editor' && (
-            <RoadmapEditor
-              key="editor"
-              roadmapId={selectedRoadmapId}
-              onBack={handleEditorBack}
-              onSave={handleEditorSave}
-            />
+            <RoadmapEditor key="editor" roadmapId={selectedRoadmapId} onBack={handleEditorBack} onSave={handleEditorSave} />
           )}
-          
-          {activeView === 'categories' && (
-            <CategoryManager key="categories" />
-          )}
-          
+          {activeView === 'categories' && <CategoryManager key="categories" />}
           {activeView === 'pomodoro' && (
-            <div key="pomodoro" className="p-8 max-w-2xl mx-auto">
-              <PomodoroTimer />
-            </div>
+            <div key="pomodoro" className="p-8 max-w-2xl mx-auto"><PomodoroTimer /></div>
           )}
-          
-          {activeView === 'statistics' && (
-            <Statistics key="statistics" />
-          )}
-          
-          {activeView === 'export' && (
-            <ImportExport key="export" mode="export" />
-          )}
-          
-          {activeView === 'import' && (
-            <ImportExport key="import" mode="import" />
-          )}
+          {activeView === 'statistics' && <Statistics key="statistics" />}
+          {activeView === 'achievements' && <Achievements key="achievements" />}
+          {activeView === 'quests' && <Quests key="quests" />}
+          {activeView === 'settings' && <Settings key="settings" />}
+          {activeView === 'templates' && <Templates key="templates" />}
+          {activeView === 'export' && <ImportExport key="export" mode="export" />}
+          {activeView === 'import' && <ImportExport key="import" mode="import" />}
         </AnimatePresence>
       </main>
     </div>
