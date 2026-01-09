@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Roadmap, Category, Step, AppState, PomodoroSession, DailyActivity, Resource } from '@/types/roadmap';
+import { 
+  Roadmap, Category, Step, AppState, PomodoroSession, DailyActivity, Resource,
+  Achievement, Quest, ActivityLog, UserSettings,
+  DEFAULT_ACHIEVEMENTS, DEFAULT_QUESTS, DEFAULT_SETTINGS, calculateLevel
+} from '@/types/roadmap';
 import { format, differenceInDays, parseISO, startOfDay } from 'date-fns';
 
 const STORAGE_KEY = 'learning-roadmap-data';
@@ -79,6 +83,12 @@ const getDefaultState = (): AppState => ({
   currentStreak: 0,
   longestStreak: 0,
   lastActiveDate: '',
+  totalXP: 0,
+  level: 1,
+  achievements: DEFAULT_ACHIEVEMENTS.map(a => ({ ...a })),
+  quests: DEFAULT_QUESTS.map(q => ({ ...q })),
+  activityLog: [],
+  settings: { ...DEFAULT_SETTINGS },
 });
 
 const loadState = (): AppState => {
@@ -86,9 +96,9 @@ const loadState = (): AppState => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Migrate old data structure
+      const defaultState = getDefaultState();
       return {
-        ...getDefaultState(),
+        ...defaultState,
         ...parsed,
         roadmaps: (parsed.roadmaps || []).map((r: Roadmap) => ({
           ...r,
@@ -98,6 +108,12 @@ const loadState = (): AppState => {
             resources: s.resources || [],
           })),
         })),
+        achievements: parsed.achievements || defaultState.achievements,
+        quests: parsed.quests || defaultState.quests,
+        activityLog: parsed.activityLog || [],
+        settings: { ...defaultState.settings, ...parsed.settings },
+        totalXP: parsed.totalXP || 0,
+        level: parsed.level || 1,
       };
     }
   } catch (error) {
@@ -120,6 +136,153 @@ export const useRoadmapStore = () => {
   useEffect(() => {
     saveState(state);
   }, [state]);
+
+  // XP and Level Management
+  const addXP = useCallback((amount: number, reason: string, relatedId?: string) => {
+    setState(prev => {
+      const newXP = prev.totalXP + amount;
+      const { level } = calculateLevel(newXP);
+      
+      const newActivity: ActivityLog = {
+        id: uuidv4(),
+        type: 'step_completed',
+        title: reason,
+        description: `Earned ${amount} XP`,
+        xp: amount,
+        timestamp: new Date().toISOString(),
+        relatedId,
+      };
+      
+      return {
+        ...prev,
+        totalXP: newXP,
+        level,
+        activityLog: [newActivity, ...prev.activityLog].slice(0, 100),
+      };
+    });
+  }, []);
+
+  // Achievement checking
+  const checkAchievements = useCallback(() => {
+    setState(prev => {
+      const completedSteps = prev.roadmaps.reduce((acc, r) => acc + r.steps.filter(s => s.completed).length, 0);
+      const completedRoadmaps = prev.roadmaps.filter(r => r.steps.length > 0 && r.steps.every(s => s.completed)).length;
+      const totalStudyMinutes = prev.roadmaps.reduce((acc, r) => acc + r.totalStudyTime, 0);
+      const completedQuests = prev.quests.filter(q => q.status === 'completed').length;
+      
+      let xpGained = 0;
+      const newActivities: ActivityLog[] = [];
+      
+      const updatedAchievements = prev.achievements.map(achievement => {
+        if (achievement.unlockedAt) return achievement;
+        
+        let progress = 0;
+        let shouldUnlock = false;
+        
+        switch (achievement.requirement.type) {
+          case 'steps_completed':
+            progress = Math.min(completedSteps / achievement.requirement.value * 100, 100);
+            shouldUnlock = completedSteps >= achievement.requirement.value;
+            break;
+          case 'roadmaps_completed':
+            progress = Math.min(completedRoadmaps / achievement.requirement.value * 100, 100);
+            shouldUnlock = completedRoadmaps >= achievement.requirement.value;
+            break;
+          case 'streak_days':
+            progress = Math.min(prev.currentStreak / achievement.requirement.value * 100, 100);
+            shouldUnlock = prev.currentStreak >= achievement.requirement.value;
+            break;
+          case 'study_minutes':
+            progress = Math.min(totalStudyMinutes / achievement.requirement.value * 100, 100);
+            shouldUnlock = totalStudyMinutes >= achievement.requirement.value;
+            break;
+          case 'quests_completed':
+            progress = Math.min(completedQuests / achievement.requirement.value * 100, 100);
+            shouldUnlock = completedQuests >= achievement.requirement.value;
+            break;
+        }
+        
+        if (shouldUnlock) {
+          xpGained += achievement.xp;
+          newActivities.push({
+            id: uuidv4(),
+            type: 'achievement_earned',
+            title: `Earned badge: ${achievement.name}`,
+            description: achievement.description,
+            xp: achievement.xp,
+            timestamp: new Date().toISOString(),
+            relatedId: achievement.id,
+          });
+          return { ...achievement, unlockedAt: new Date().toISOString(), progress: 100 };
+        }
+        
+        return { ...achievement, progress };
+      });
+      
+      const newXP = prev.totalXP + xpGained;
+      const { level } = calculateLevel(newXP);
+      
+      return {
+        ...prev,
+        achievements: updatedAchievements,
+        totalXP: newXP,
+        level,
+        activityLog: [...newActivities, ...prev.activityLog].slice(0, 100),
+      };
+    });
+  }, []);
+
+  // Quest progress update
+  const updateQuestProgress = useCallback((type: Quest['requirement']['type'], amount: number) => {
+    setState(prev => {
+      let xpGained = 0;
+      const newActivities: ActivityLog[] = [];
+      
+      const updatedQuests = prev.quests.map(quest => {
+        if (quest.status === 'completed' || quest.status === 'locked') return quest;
+        if (quest.requirement.type !== type) return quest;
+        
+        const newCurrent = quest.requirement.current + amount;
+        const isCompleted = newCurrent >= quest.requirement.value;
+        
+        if (isCompleted) {
+          xpGained += quest.xp;
+          newActivities.push({
+            id: uuidv4(),
+            type: 'quest_completed',
+            title: `Completed quest: ${quest.title}`,
+            description: quest.description,
+            xp: quest.xp,
+            timestamp: new Date().toISOString(),
+            relatedId: quest.id,
+          });
+          return {
+            ...quest,
+            requirement: { ...quest.requirement, current: newCurrent },
+            status: 'completed' as const,
+            completedAt: new Date().toISOString(),
+          };
+        }
+        
+        return {
+          ...quest,
+          requirement: { ...quest.requirement, current: newCurrent },
+          status: newCurrent > 0 ? 'in_progress' as const : quest.status,
+        };
+      });
+      
+      const newXP = prev.totalXP + xpGained;
+      const { level } = calculateLevel(newXP);
+      
+      return {
+        ...prev,
+        quests: updatedQuests,
+        totalXP: newXP,
+        level,
+        activityLog: [...newActivities, ...prev.activityLog].slice(0, 100),
+      };
+    });
+  }, []);
 
   // Streak calculation
   const updateStreak = useCallback(() => {
@@ -254,6 +417,16 @@ export const useRoadmapStore = () => {
       const step = roadmap?.steps.find(s => s.id === stepId);
       const wasCompleted = step?.completed;
       
+      const newActivity: ActivityLog | null = !wasCompleted ? {
+        id: uuidv4(),
+        type: 'step_completed',
+        title: `Completed: ${step?.title || 'Step'}`,
+        description: `From ${roadmap?.title || 'Roadmap'}`,
+        xp: 50,
+        timestamp: new Date().toISOString(),
+        relatedId: stepId,
+      } : null;
+      
       return {
         ...prev,
         roadmaps: prev.roadmaps.map(r =>
@@ -273,12 +446,16 @@ export const useRoadmapStore = () => {
               }
             : r
         ),
+        totalXP: wasCompleted ? prev.totalXP : prev.totalXP + 50,
+        activityLog: newActivity ? [newActivity, ...prev.activityLog].slice(0, 100) : prev.activityLog,
       };
     });
     
-    // Record activity when completing a step
+    // Record activity and update quests
     recordDailyActivity(1, 0, roadmapId);
-  }, [recordDailyActivity]);
+    updateQuestProgress('complete_steps', 1);
+    checkAchievements();
+  }, [recordDailyActivity, updateQuestProgress, checkAchievements]);
 
   const deleteStep = useCallback((roadmapId: string, stepId: string) => {
     setState(prev => ({
@@ -352,6 +529,16 @@ export const useRoadmapStore = () => {
       completed,
     };
     
+    const newActivity: ActivityLog = {
+      id: uuidv4(),
+      type: 'pomodoro_completed',
+      title: 'Pomodoro Session Complete',
+      description: `${duration} minutes of focused study`,
+      xp: Math.floor(duration * 2),
+      timestamp: new Date().toISOString(),
+      relatedId: roadmapId,
+    };
+    
     setState(prev => ({
       ...prev,
       pomodoroSessions: [...prev.pomodoroSessions, session],
@@ -360,12 +547,17 @@ export const useRoadmapStore = () => {
           ? { ...r, totalStudyTime: r.totalStudyTime + duration }
           : r
       ),
+      totalXP: prev.totalXP + Math.floor(duration * 2),
+      activityLog: [newActivity, ...prev.activityLog].slice(0, 100),
     }));
     
     recordDailyActivity(0, duration, roadmapId);
+    updateQuestProgress('study_minutes', duration);
+    updateQuestProgress('pomodoro_sessions', 1);
+    checkAchievements();
     
     return session;
-  }, [recordDailyActivity]);
+  }, [recordDailyActivity, updateQuestProgress, checkAchievements]);
 
   const addCategory = useCallback((category: Omit<Category, 'id'>) => {
     const newCategory: Category = {
@@ -395,6 +587,13 @@ export const useRoadmapStore = () => {
       roadmaps: prev.roadmaps.map(r =>
         r.categoryId === id ? { ...r, categoryId: '' } : r
       ),
+    }));
+  }, []);
+
+  const updateSettings = useCallback((updates: Partial<UserSettings>) => {
+    setState(prev => ({
+      ...prev,
+      settings: { ...prev.settings, ...updates },
     }));
   }, []);
 
@@ -522,6 +721,17 @@ export const useRoadmapStore = () => {
     return state.roadmaps.reduce((acc, r) => acc + r.totalStudyTime, 0);
   }, [state.roadmaps]);
 
+  const resetDailyQuests = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      quests: prev.quests.map(q => 
+        q.type === 'daily' 
+          ? { ...q, requirement: { ...q.requirement, current: 0 }, status: 'available' as const, completedAt: undefined }
+          : q
+      ),
+    }));
+  }, []);
+
   return {
     roadmaps: state.roadmaps,
     categories: state.categories,
@@ -529,6 +739,12 @@ export const useRoadmapStore = () => {
     dailyActivities: state.dailyActivities,
     currentStreak: state.currentStreak,
     longestStreak: state.longestStreak,
+    totalXP: state.totalXP,
+    level: state.level,
+    achievements: state.achievements,
+    quests: state.quests,
+    activityLog: state.activityLog,
+    settings: state.settings,
     addRoadmap,
     updateRoadmap,
     deleteRoadmap,
@@ -542,6 +758,7 @@ export const useRoadmapStore = () => {
     addCategory,
     updateCategory,
     deleteCategory,
+    updateSettings,
     exportData,
     importData,
     getProgress,
@@ -550,5 +767,9 @@ export const useRoadmapStore = () => {
     getUpcomingDueDates,
     getOverdueSteps,
     getTotalStudyTime,
+    addXP,
+    checkAchievements,
+    updateQuestProgress,
+    resetDailyQuests,
   };
 };
